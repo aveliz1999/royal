@@ -1,0 +1,24 @@
+---
+- name: Check if current agent files already exist
+  ansible.builtin.stat:
+          path: /opt/AppDynamics
+  register: existing_agent_dir
+
+- name: Delete existing files
+  when: existing_agent_dir.stat.isdir is defined
+  ansible.builtin.file:
+          path: /opt/AppDynamics
+          state: absent
+
+- name: Copy backup files
+  when: existing_agent_dir.stat.isdir is defined
+  copy:
+          remote_src: true
+          dest: /opt/AppDynamics
+          src: "{{ansible_local['appdynamics_rollback']['appdynamics_rollback']['version']}}/"
+
+- name: Delete restored backup
+  when: existing_agent_dir.stat.isdir is defined
+  ansible.builtin.file:
+          path: "{{ansible_local['appdynamics_rollback']['appdynamics_rollback']['version']}}"
+          state: absent

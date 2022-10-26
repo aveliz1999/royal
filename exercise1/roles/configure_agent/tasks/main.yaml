@@ -1,0 +1,30 @@
+---
+- name: Read config
+  shell: cat /opt/AppDynamics/conf/controller-info.xml
+  register: controller_config
+
+- name: Update Controller-Host config
+  when: controller_config.stdout.find('<controller-host></controller-host>') != -1 # Only run if controller-host has default value
+  ansible.builtin.lineinfile:
+          path: /opt/AppDynamics/conf/controller-info.xml
+          regexp: '(.*)<controller-host></controller-host>(.*)'
+          line: '\1<controller-host>CONTROLLERINFO</controller-host>\2'
+          backrefs: yes
+          state: present
+
+- name: Update Controller-Port config
+  when: controller_config.stdout.find('<controller-port></controller-port>') != -1 # Only run if controller-port has default value
+  ansible.builtin.lineinfile:
+          path: /opt/AppDynamics/conf/controller-info.xml
+          regexp: '(.*)<controller-port></controller-port>(.*)'
+          line: '\1<controller-port>443</controller-port>\2'
+          backrefs: yes
+          state: present
+
+- name: Add Application-Name config
+  when: controller_config.stdout.find('<application-name>') == -1 # Only run if application-name doesn't already exist
+  ansible.builtin.lineinfile:
+          path: /opt/AppDynamics/conf/controller-info.xml
+          insertbefore: '</controller-info>'
+          line: '<application-name>APP</application-name>'
+          state: present

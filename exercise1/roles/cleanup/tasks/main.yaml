@@ -1,0 +1,5 @@
+---
+- name: Clean up download
+  ansible.builtin.file:
+          path: "{{downloaded_file_latest.dest if downloaded_file_latest is not skipped else downloaded_file_specific.dest}}"
+          state: absent

@@ -1,0 +1,2 @@
+install_version: "" # Specify to not download the latest version
+rollback: false # If true it will run the rollback role rather than doing a deployment

@@ -1,0 +1,77 @@
+---
+- name: Handle rollback fact
+  include_tasks: rollback_fact.yaml
+
+- name: Get the list of latest downloads
+  ansible.builtin.uri:
+          url: "https://download.appdynamics.com/download/downloadfilelatest/?format=json"
+          method: GET
+  register: latest
+
+- name: Download latest agent
+  when: install_version is not defined or install_version == "" # If the install_version variable is not specified with a value
+  ansible.builtin.get_url:
+          url: "{{ latest.json|json_query(\"[?bit == '64' && os == 'linux' && filetype == 'machine-bundle'].download_path\")|first }}"
+          dest: /tmp/
+          headers:
+                  Authorization: "Bearer {{auth_result.json.access_token}}"
+  register: downloaded_file_latest
+
+- name: Download specific version agent
+  when: install_version is defined and install_version != "" # If the install_version variable is specified with a value
+  ansible.builtin.get_url:
+          url: "https://download.appdynamics.com/download/prox/download-file/machine-bundle/22.9.0.3458/machineagent-bundle-64bit-linux-{{install_version}}.zip"
+          dest: /tmp/
+          headers:
+                  Authorization: "Bearer {{auth_result.json.access_token}}"
+  register: downloaded_file_specific
+
+- name: Check if current agent files already exist
+  ansible.builtin.stat:
+          path: /opt/AppDynamics
+  register: existing_agent_dir
+
+- name: Backup current agent files if they exist
+  when: existing_agent_dir.stat.isdir is defined # Do the backup only if the current agent exists
+  copy:
+          remote_src: true
+          src: /opt/AppDynamics/
+          dest: "/opt/AppDynamics_backup_{{ansible_date_time.epoch}}"
+  register: backup_file
+
+# Update the rollback fact with the file name of the backup
+- name: Update rollback fact
+  when: backup_file.dest is defined 
+  ansible.builtin.lineinfile:
+          path: /etc/ansible/facts.d/appdynamics_rollback.fact
+          regexp: 'version'
+          line: "version={{backup_file.dest}}"
+
+- name: Remove current agent files if they exist
+  when: existing_agent_dir.stat.isdir is defined
+  ansible.builtin.file:
+          path: /opt/AppDynamics
+          state: absent
+
+# Needs to be installed to unarchive the zip
+- name: Install unzip
+  ansible.builtin.package:
+          name: unzip
+          state: present
+
+- name: Create directory
+  file:
+          path: /opt/AppDynamics
+          state: directory
+
+- name: Extract contents
+  ansible.builtin.unarchive:
+          src: "{{downloaded_file_latest.dest if downloaded_file_latest is not skipped else downloaded_file_specific.dest}}" # Use a different variable depending on if a version number was specified
+          dest: /opt/AppDynamics
+          remote_src: yes
+
+- name: Create symlink
+  ansible.builtin.file:
+          src: /opt/AppDynamics
+          dest: "/{{ansible_env.HOME}}/MachineAgent"
+          state: link

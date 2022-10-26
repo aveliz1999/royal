@@ -1,0 +1,18 @@
+---
+# Create local facts file to handle being able to roll back deployment
+
+- name: Create local facts directory
+  file:
+          path: /etc/ansible/facts.d
+          state: directory
+
+- name: Check if local rollback fact exists
+  ansible.builtin.stat:
+          path: /etc/ansible/facts.d/appdynamics_rollback.fact
+  register: existing_fact
+
+- name: Copy initial fact file
+  when: existing_fact.stat.isdir is not defined
+  copy:
+          src: rollback.fact
+          dest: /etc/ansible/facts.d/appdynamics_rollback.fact

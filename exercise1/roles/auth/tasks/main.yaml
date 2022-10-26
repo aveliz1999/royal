@@ -1,0 +1,13 @@
+---
+- name: Retrieve OAUTH token with the download scope
+  ansible.builtin.uri:
+          url: "https://identity.msrv.saas.appdynamics.com/v2.0/oauth/token"
+          method: POST
+          body:
+                  username: "adrian@veliz99.com"
+                  password: "oDL@9LF9EACzJ$G&v"
+                  scopes:
+                          - "download"
+          body_format: json
+  register: auth_result
+

@@ -1,0 +1,29 @@
+---
+- hosts: deployment_targets
+  gather_facts: yes
+  become: yes
+  roles:
+          - { role: auth, when: not rollback}
+- hosts: deployment_targets
+  gather_facts: yes
+  become: yes
+  roles:
+          - { role: download_agent, when: not rollback }
+
+- hosts: deployment_targets
+  gather_facts: yes
+  become: yes
+  roles:
+          - { role: configure_agent, when: not rollback }
+
+- hosts: deployment_targets
+  gather_facts: yes
+  become: yes
+  roles:
+          - { role: cleanup, when: not rollback }
+
+- hosts: deployment_targets
+  gather_facts: yes
+  become: yes
+  roles:
+          - { role: rollback, when: rollback }
